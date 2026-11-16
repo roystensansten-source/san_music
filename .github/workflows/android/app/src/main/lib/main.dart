@@ -6,11 +6,16 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.example.music.channel.audio',
-    androidNotificationChannelName: 'Music Playback',
-    androidNotificationOngoing: true,
-  );
+  try {
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'com.example.music.channel.audio',
+      androidNotificationChannelName: 'Music Playback',
+      androidNotificationOngoing: true,
+    );
+  } catch (e, stacktrace) {
+    debugPrint("Error initializing AudioService: $e");
+    debugPrint("$stacktrace");
+  }
 
   runApp(const MaterialApp(
     debugShowCheckedModeBanner: false,
