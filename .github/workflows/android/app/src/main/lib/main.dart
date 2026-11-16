@@ -5,8 +5,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Set up background audio notifications
+
   await JustAudioBackground.init(
     androidNotificationChannelId: 'com.example.music.channel.audio',
     androidNotificationChannelName: 'Music Playback',
@@ -44,26 +43,28 @@ class _MusicPlayerScreenState extends State<MusicPlayerScreen> {
     super.dispose();
   }
 
-  // 1. Search Logic: Searches YouTube for tracks
   Future<void> _searchSongs(String query) async {
     if (query.trim().isEmpty) return;
     setState(() => _isLoading = true);
 
     try {
       final results = await _yt.search.search(query);
+      if (!mounted) return;
       setState(() {
         _searchResults = results.toList();
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Search failed: $e")),
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
-  // 2. Stream Extractor Logic: Extracts the raw audio URL with no video and plays it
   Future<void> _playVideo(Video video) async {
     setState(() {
       _isLoading = true;
@@ -72,7 +73,7 @@ class _MusicPlayerScreenState extends State<MusicPlayerScreen> {
     });
 
     try {
-      final manifest = await _yt.videos.streamsClient.getManifest(video.id);
+      final manifest = await _yt.videos.streams.getManifest(video.id);
       final audioStream = manifest.audioOnly.withHighestBitrate();
 
       final audioSource = AudioSource.uri(
@@ -89,15 +90,17 @@ class _MusicPlayerScreenState extends State<MusicPlayerScreen> {
       await _player.setAudioSource(audioSource);
       await _player.play();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error playing audio: $e")),
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
-  // 3. UI Code: The visual screen with search bar, song list, and play/pause controls
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -143,6 +146,8 @@ class _MusicPlayerScreenState extends State<MusicPlayerScreen> {
                     width: 50,
                     height: 50,
                     fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.music_note, color: Colors.white54),
                   ),
                   title: Text(
                     item.title,
@@ -194,7 +199,9 @@ class _MusicPlayerScreenState extends State<MusicPlayerScreen> {
                       final isPlaying = state?.playing ?? false;
                       return IconButton(
                         icon: Icon(
-                          isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                          isPlaying
+                              ? Icons.pause_circle_filled
+                              : Icons.play_circle_filled,
                           size: 40,
                           color: Colors.black,
                         ),
